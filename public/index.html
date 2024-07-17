@@ -2,16 +2,35 @@
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Powered Android App Creator</title>
+    <title>AP Test Tutoring with Gemini</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        .header-controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(45deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        .header-controls {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
             gap: 10px;
         }
         #googleLoginButton {
@@ -34,15 +53,87 @@
             height: 24px;
             fill: #ffffff;
         }
+        .path-selection {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .path-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .path-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .path-card h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .path-card p {
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        .path-card button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #ffffff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .path-card button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        #chatArea {
+            display: none;
+            margin-top: 40px;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 20px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+        .chat-input button {
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: none;
+            background: rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body class="light-mode">
+<body>
     <div class="container">
-        <div class="instructions glassmorphism">
-            <h1>Use the power of Gemini to Master These AP Tests!</h1>
-            <p>
-                Select the topic to begin your learning journey! 
-            </p>
+        <div class="header">
+            <h1>Master Your AP Tests with Gemini</h1>
+            <p id="welcomeMessage">Select your subject to begin your personalized tutoring journey</p>
             <div class="header-controls">
                 <div id="googleLoginButton"></div>
                 <button id="nightModeToggle" onclick="toggleNightMode()" aria-label="Toggle night mode">
@@ -52,29 +143,44 @@
                 </button>
             </div>
         </div>
-        <div class="main-content">
-            <div class="chat-area glassmorphism">
-                <div class="chat-messages" id="chatMessages">
-                    <!-- Chat messages will be added here dynamically -->
-                </div>
-                <div class="chat-input">
-                    <input type="text" id="userInput" placeholder="Type your request here...">
-                    <button onclick="sendMessage()">Send</button>
-                </div>
-                <button id="resetButton" onclick="resetCanvas()">Reset Canvas</button>
+        <div id="pathSelection" class="path-selection">
+            <div class="path-card" onclick="selectPath('AP History')">
+                <h2>AP American History</h2>
+                <p>Master key historical events, analyze primary sources, and develop critical thinking skills for AP American History exams.</p>
+                <button>Start Learning</button>
             </div>
-            <div class="phone-preview glassmorphism">
-                <div class="phone-screen">
-                    <img id="appPreview" src="https://via.placeholder.com/260x460" alt="Android App Preview">
-                </div>
-                <button id="exportButton" onclick="exportToAPK()">Export to APK</button>
-                <a href="install_apk.html" target="_blank">How to install APK</a>
+            <div class="path-card" onclick="selectPath('AP English Literature')">
+                <h2>AP English Literature</h2>
+                <p>Enhance your literary analysis skills, explore classic and contemporary works, and prepare for AP English Literature exams.</p>
+                <button>Start Learning</button>
+            </div>
+            <div class="path-card" onclick="selectPath('AP Biology')">
+                <h2>AP Biology</h2>
+                <p>Dive into core biological concepts, conduct virtual labs, and prepare for AP Biology exams with personalized guidance.</p>
+                <button>Start Learning</button>
+            </div>
+        </div>
+        <div id="chatArea" style="display: none;">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Type your question here...">
+                <button onclick="sendMessage()">Send</button>
             </div>
         </div>
     </div>
 
     <script>
         let jwtToken = '';
+        let selectedPath = '';
+        let currentDifficulty = 'medium';
+
+        function selectPath(path) {
+            selectedPath = path;
+            document.getElementById('pathSelection').style.display = 'none';
+            document.getElementById('chatArea').style.display = 'block';
+            document.getElementById('welcomeMessage').textContent = `Your ${path} tutoring session`;
+            addMessage(`Welcome to your ${path} tutoring session! What would you like to start with?`, false);
+        }
 
         function addMessage(text, isUser) {
             const chatMessages = document.getElementById('chatMessages');
@@ -89,7 +195,7 @@
         async function sendMessage() {
             const input = document.getElementById('userInput');
             const message = input.value.trim();
-            if (message && jwtToken) {
+            if (message && jwtToken && selectedPath) {
                 addMessage(message, true);
                 input.value = '';
                 
@@ -100,7 +206,11 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${jwtToken}`
                         },
-                        body: JSON.stringify({ message: message })
+                        body: JSON.stringify({ 
+                            message: message,
+                            path: selectedPath,
+                            difficulty: currentDifficulty
+                        })
                     });
 
                     if (!response.ok) {
@@ -109,37 +219,25 @@
 
                     const data = await response.json();
                     addMessage(data.response, false);
+                    
+                    if (data.adjustDifficulty) {
+                        currentDifficulty = data.adjustDifficulty;
+                    }
                 } catch (error) {
                     console.error('Error:', error);
                     addMessage("Sorry, I encountered an error while processing your request.", false);
                 }
             } else if (!jwtToken) {
-                addMessage("Please log in to send messages.", false);
+                alert("Please log in to send messages.");
+            } else if (!selectedPath) {
+                alert("Please select an AP subject to begin.");
             }
-        }
-
-        function resetCanvas() {
-            document.getElementById('appPreview').src = "https://via.placeholder.com/260x460";
-            addMessage("Canvas has been reset. You can start a new app design.", false);
-        }
-
-        function exportToAPK() {
-            // Placeholder for APK export functionality
-            addMessage("Exporting to APK. Please wait...", false);
         }
 
         function toggleNightMode() {
             document.body.classList.toggle('dark-mode');
-            document.body.classList.toggle('light-mode');
-            const nightModeToggle = document.getElementById('nightModeToggle');
-            if (document.body.classList.contains('dark-mode')) {
-                nightModeToggle.setAttribute('aria-label', 'Toggle day mode');
-            } else {
-                nightModeToggle.setAttribute('aria-label', 'Toggle night mode');
-            }
         }
 
-        // Add event listener for Enter key
         document.getElementById('userInput').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
                 sendMessage();
@@ -162,23 +260,23 @@
 
                 const data = await res.json();
                 jwtToken = data.token;
-                addMessage(`Successfully logged in as ${data.user.email}!`, false);
+                document.getElementById('welcomeMessage').textContent = `Welcome, ${data.user.email}! Select your subject to begin.`;
             } catch (error) {
                 console.error('Login failed:', error);
-                addMessage("Failed to log in. Please try again.", false);
+                alert("Failed to log in. Please try again.");
             }
         }
 
         window.onload = function () {
             google.accounts.id.initialize({
-                client_id: '40297893066-5hc9g448428c52lpj7rjbh006nopf5de.apps.googleusercontent.com', // Replace with your actual Google Client ID
+                client_id: '40297893066-5hc9g448428c52lpj7rjbh006nopf5de.apps.googleusercontent.com',
                 callback: handleCredentialResponse
             });
             google.accounts.id.renderButton(
                 document.getElementById("googleLoginButton"),
-            { theme: "outline", size: "small", shape: "square" }  // customization attributes
+                { theme: "outline", size: "small", shape: "square" }
             );
-            google.accounts.id.prompt(); // also display the One Tap dialog
+            google.accounts.id.prompt();
         }
     </script>
 </body>
