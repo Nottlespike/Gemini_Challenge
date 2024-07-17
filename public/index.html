@@ -3,21 +3,54 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Powered Android App Creator</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        .header-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        #googleLoginButton {
+            height: 40px;
+        }
+        #nightModeToggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+        #nightModeToggle svg {
+            width: 24px;
+            height: 24px;
+            fill: #ffffff;
+        }
+    </style>
 </head>
 <body class="light-mode">
     <div class="container">
         <div class="instructions glassmorphism">
-            <h1>Build your own Android app with the power of AI</h1>
+            <h1>Use the power of Gemini to Master These AP Tests!</h1>
             <p>
-                Simply input a request below and we will paint the black canvas on the right with your request. 
-                When you need to reset press the button below the canvas on the left. 
-                When you are ready to export your very own Android app click the export to APK button on the right.
+                Select the topic to begin your learning journey! 
             </p>
-            <button id="nightModeToggle" onclick="toggleNightMode()" aria-label="Toggle night mode">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-16v2h2V4h-2zm0 14v2h2v-2h-2zm8-7h2v-2h-2v2zm-14 0h2v-2H5v2zm10.07-8.07l1.41-1.41-1.41-1.41-1.41 1.41 1.41 1.41zM7.05 19.07l1.41-1.41-1.41-1.41-1.41 1.41 1.41 1.41zM19.07 16.95l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41zM4.93 4.93L3.52 3.52 2.1 4.93 3.52 6.34 4.93 4.93z"/>
-                </svg>
-            </button>
+            <div class="header-controls">
+                <div id="googleLoginButton"></div>
+                <button id="nightModeToggle" onclick="toggleNightMode()" aria-label="Toggle night mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-16v2h2V4h-2zm0 14v2h2v-2h-2zm8-7h2v-2h-2v2zm-14 0h2v-2H5v2zm10.07-8.07l1.41-1.41-1.41-1.41-1.41 1.41 1.41 1.41zM7.05 19.07l1.41-1.41-1.41-1.41-1.41 1.41 1.41 1.41zM19.07 16.95l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41zM4.93 4.93L3.52 3.52 2.1 4.93 3.52 6.34 4.93 4.93z"/>
+                    </svg>
+                </button>
+            </div>
         </div>
         <div class="main-content">
             <div class="chat-area glassmorphism">
@@ -41,6 +74,8 @@
     </div>
 
     <script>
+        let jwtToken = '';
+
         function addMessage(text, isUser) {
             const chatMessages = document.getElementById('chatMessages');
             const messageElement = document.createElement('div');
@@ -51,19 +86,35 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const input = document.getElementById('userInput');
             const message = input.value.trim();
-            if (message) {
+            if (message && jwtToken) {
                 addMessage(message, true);
                 input.value = '';
                 
-                // Simulate AI response (replace with actual AI integration)
-                setTimeout(() => {
-                    addMessage("I'm processing your request for an Android app. The preview will update shortly.", false);
-                    // Simulate updating the app preview (replace with actual preview generation)
-                    document.getElementById('appPreview').src = "https://cdn.mos.cms.futurecdn.net/Xj58EYWQAj93cby2KK6xNY.png";
-                }, 1000);
+                try {
+                    const response = await fetch('http://localhost:8000/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${jwtToken}`
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get response from server');
+                    }
+
+                    const data = await response.json();
+                    addMessage(data.response, false);
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage("Sorry, I encountered an error while processing your request.", false);
+                }
+            } else if (!jwtToken) {
+                addMessage("Please log in to send messages.", false);
             }
         }
 
@@ -94,6 +145,41 @@
                 sendMessage();
             }
         });
+
+        async function handleCredentialResponse(response) {
+            try {
+                const res = await fetch('http://localhost:8000/api/auth/google', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to authenticate with the server');
+                }
+
+                const data = await res.json();
+                jwtToken = data.token;
+                addMessage(`Successfully logged in as ${data.user.email}!`, false);
+            } catch (error) {
+                console.error('Login failed:', error);
+                addMessage("Failed to log in. Please try again.", false);
+            }
+        }
+
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: '40297893066-5hc9g448428c52lpj7rjbh006nopf5de.apps.googleusercontent.com', // Replace with your actual Google Client ID
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("googleLoginButton"),
+            { theme: "outline", size: "small", shape: "square" }  // customization attributes
+            );
+            google.accounts.id.prompt(); // also display the One Tap dialog
+        }
     </script>
 </body>
 </html>
